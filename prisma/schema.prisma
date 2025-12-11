@@ -1,0 +1,74 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  PATIENT
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+}
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  email     String   @unique
+  role      Role     @default(PATIENT)
+  createdAt DateTime @default(now())
+
+  bookings  Booking[]
+}
+
+model Doctor {
+  id             String   @id @default(uuid()) @db.Uuid
+  name           String
+  specialization String?
+  location       String?
+  createdAt      DateTime @default(now())
+
+  slots          Slot[]
+}
+
+model Slot {
+  id                String   @id @default(uuid()) @db.Uuid
+  doctorId          String   @db.Uuid
+  startTime         DateTime
+  endTime           DateTime?
+  totalCapacity     Int      @default(1)
+  availableCapacity Int
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+
+  doctor            Doctor   @relation(fields: [doctorId], references: [id])
+  bookings          Booking[]
+
+  @@index([doctorId, startTime])
+}
+
+model Booking {
+  id            String         @id @default(uuid()) @db.Uuid
+  userId        String         @db.Uuid
+  slotId        String         @db.Uuid
+  numSeats      Int            @default(1)
+  status        BookingStatus
+  failureReason String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  expiresAt     DateTime?
+
+  user          User           @relation(fields: [userId], references: [id])
+  slot          Slot           @relation(fields: [slotId], references: [id])
+
+  @@index([slotId, status])
+  @@index([status, expiresAt])
+}
